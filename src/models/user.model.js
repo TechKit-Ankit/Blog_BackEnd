@@ -15,7 +15,7 @@ const userSchema = new Schema(
         roll: {
             type: String,
             enum: ["user", "admin"],
-            required: true
+            default: "user"
         },
         email: {
             type: String,

@@ -26,6 +26,20 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 }
 
+const uploadImageBufferOnCloudinary = async (imageBufferData) => {
+    try {
+        const uploadResult = await cloudinary.uploader.upload(`data:image/jpeg;base64,${imageBufferData}`, {
+            resource_type: "image"
+        });
+        return uploadResult;
+    } catch (error) {
+        throw new Error("Image upload failed: " + error.message);
+    }
+};
 
 
-export { uploadOnCloudinary }
+
+export {
+    uploadOnCloudinary,
+    uploadImageBufferOnCloudinary
+}

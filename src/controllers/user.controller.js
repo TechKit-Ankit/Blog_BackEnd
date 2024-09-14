@@ -1,7 +1,11 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js"
 import { User } from "../models/user.model.js"
+import { Category } from "../models/category.model.js"
+import { SubCategory } from "../models/subcategory.model.js"
+import { Post } from "../models/post.model.js"
 import { uploadOnCloudinary } from "../utils/cloudinary.js"
+import { uploadImageBufferOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -334,6 +338,72 @@ const makeAdmin = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "User made Admin successfully"))
 })
 
+const postContent = asyncHandler(async (req, res) => {
+    // 1. Extract category, subcategory, and post content from request body
+    // 2. Validate if all fields are present
+    // 3. Check if category and subcategory exist, if not, create them
+    // 4. Parse the post content to find image buffers
+    // 5. Upload the images to Cloudinary and replace image buffers with URLs
+    // 6. Create and save the post in the database
+    // 7. Return response
+
+    const { category, subcategory, postContent } = req.body;
+
+    // Step 2: Validation - check if any field is missing
+    if (
+        [category, subcategory, postContent].some((field) => field?.trim() === "")
+    ) {
+        throw new ApiError(400, "Category, Subcategory, and Post Content are required");
+    }
+
+    // Step 3: Check if category and subcategory exist, if not, create them
+    const categoryObj = await Category.findOne({ name: category }) || await Category.create({ name: category });
+    const subcategoryObj = await SubCategory.findOne({ name: subcategory, category: categoryObj._id }) || await SubCategory.create({ name: subcategory, category: categoryObj._id });
+
+    // Step 4: Parse the post content to extract <img> tags and process images
+    const parsedData = parse(postContent);
+    const imgTags = parsedData.querySelectorAll('img');
+
+    for (let imgTag of imgTags) {
+        const imageBuffer = imgTag.getAttribute('src');  // Assuming base64 in 'src'
+
+        if (!imageBuffer.startsWith("data:image/")) {
+            throw new ApiError(400, "Invalid image format in post content");
+        }
+
+        // Extract base64 part from data URL (after the comma)
+        const base64Data = imageBuffer.split(',')[1];
+
+        // Step 5: Upload the image buffer to Cloudinary
+        const uploadResponse = await uploadImageBufferOnCloudinary(base64Data);
+
+        // Replace the image buffer with Cloudinary URL
+        imgTag.setAttribute('src', uploadResponse.secure_url);
+    }
+
+    // Step 6: Save the updated post content
+    const updatedPostContent = parsedData.toString();
+
+    // Step 6: Create the post object and save it to the database
+    const newPost = await Post.create({
+        category: categoryObj._id,
+        subcategory: subcategoryObj._id,
+        content: updatedPostContent
+    });
+
+    if (!newPost) {
+        throw new ApiError(500, "Error creating the post");
+    }
+
+    // Step 7: Return response
+    return res.status(201).json(
+        new ApiResponse(201, newPost, "Post created successfully")
+    );
+});
+
+
+
+
 
 
 export {
@@ -345,5 +415,6 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    makeAdmin
+    makeAdmin,
+    postContent
 }

@@ -8,7 +8,8 @@ import {
     getCurrentUser,
     updateUserAvatar,
     updateAccountDetails,
-    makeAdmin
+    makeAdmin,
+    postContent
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -38,5 +39,6 @@ router.route("/update-account").patch(verifyJWT, updateAccountDetails)
 router.route("/firstAdmin").post(makeAdmin)//only for 1st admin
 router.route("/makeAdmin").post(verifyJWT, verifyAdmin, makeAdmin)
 router.route("/avatar").patch(verifyJWT, upload.single("avatar"), updateUserAvatar)
+router.route("/postContent").post(verifyJWT, verifyAdmin, postContent)
 
 export default router
